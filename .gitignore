@@ -1,0 +1,10 @@
+*.~*
+
+/.idea/
+/.vscode/
+/bin/
+/src/vendor
+/config/
+!/config/settings.json.sample
+!/config/genesis_mainnet.json
+generated*.go
