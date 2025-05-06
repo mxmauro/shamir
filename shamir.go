@@ -3,20 +3,14 @@
 package shamir
 
 import (
-	"crypto/rand"
 	"errors"
 )
 
 // -----------------------------------------------------------------------------
 
-const generateOffsetListSwapRounds = 100
-const generateOffsetListSwapCount = 100
-
-// -----------------------------------------------------------------------------
-
-// Split divides a secret into several parts to be shared
+// Split divides a secret into several parts to be shared.
 func Split(secret []byte, numParts, threshold int) ([][]byte, error) {
-	// Check parameters
+	// Check parameters.
 	if threshold < 2 || threshold > 255 {
 		return nil, errors.New("threshold value must be between 2 and 255")
 	}
@@ -28,20 +22,20 @@ func Split(secret []byte, numParts, threshold int) ([][]byte, error) {
 		return nil, errors.New("no secret was provided")
 	}
 
-	// Generate random list of offsets
+	// Generate a random list of offsets.
 	offsetList, err := generateOffsetList(byte(numParts))
 	if err != nil {
 		return nil, err
 	}
 
-	// Prepare each part and initialize the offset
+	// Prepare each part and initialize the offset.
 	secretParts := make([][]byte, numParts)
 	for idx := range secretParts {
 		secretParts[idx] = make([]byte, secretLen+1)
 		secretParts[idx][secretLen] = offsetList[idx] + 1
 	}
 
-	// Generate a new polynomial for each secret byte
+	// Generate a new polynomial for each secret byte.
 	for idx, val := range secret {
 		p := newRandomPolynomial(val, byte(threshold)-1)
 		if p == nil {
@@ -52,13 +46,13 @@ func Split(secret []byte, numParts, threshold int) ([][]byte, error) {
 		}
 	}
 
-	// Done
+	// Done!
 	return secretParts, nil
 }
 
-// Combine recreates a secret if enough parts are provided
+// Combine recreates a secret if enough parts are provided.
 func Combine(secretParts [][]byte) ([]byte, error) {
-	// Check parameters
+	// Check parameters.
 	secretPartsLen := len(secretParts)
 	if secretPartsLen < 2 {
 		return nil, errors.New("insufficient number of secret parts")
@@ -80,10 +74,10 @@ func Combine(secretParts [][]byte) ([]byte, error) {
 		}
 	}
 
-	// Prepare to save combined secret
+	// Prepare to save the combined secret.
 	secret := make([]byte, firstPartsLen-1)
 
-	// Calculate each byte
+	// Calculate each byte.
 	points := make([]point, secretPartsLen)
 	for i := range secret {
 		for idx, secretPart := range secretParts {
@@ -95,32 +89,6 @@ func Combine(secretParts [][]byte) ([]byte, error) {
 		secret[i] = interpolateAt0(points)
 	}
 
-	// Done
+	// Done!
 	return secret, nil
-}
-
-// -----------------------------------------------------------------------------
-
-func generateOffsetList(size byte) ([]byte, error) {
-	var swap [2 * generateOffsetListSwapCount]byte
-
-	offsetList := make([]byte, size)
-	for i := byte(0); i < size; i++ {
-		offsetList[i] = i
-	}
-
-	for r := 0; r < generateOffsetListSwapRounds; r++ {
-		_, err := rand.Read(swap[:])
-		if err != nil {
-			return nil, err
-		}
-		for i := 0; i < 2*generateOffsetListSwapCount; i += 2 {
-			x := swap[i] % size
-			y := swap[i+1] % size
-			offsetList[x], offsetList[y] = offsetList[y], offsetList[x]
-		}
-	}
-
-	// Done
-	return offsetList, nil
 }
